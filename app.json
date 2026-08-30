@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "The Last Alibi",
+    "slug": "the-last-alibi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/last-alibi-mark.png",
+    "scheme": "lastalibi",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#12100D",
+        "foregroundImage": "./assets/images/last-alibi-mark.png"
+      },
+      "predictiveBackGestureEnabled": true,
+      "package": "com.lastalibi.game"
+    },
+    "web": {
+      "output": "static",
+      "bundler": "metro",
+      "favicon": "./assets/images/last-alibi-mark.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#12100D",
+          "image": "./assets/images/last-alibi-mark.png",
+          "imageWidth": 180
+        }
+      ],
+      "expo-audio",
+      "@sentry/react-native",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

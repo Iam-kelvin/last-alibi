@@ -1,0 +1,13 @@
+{
+  "name": "The Last Alibi",
+  "short_name": "Last Alibi",
+  "description": "Compact deduction mysteries, playable offline.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#12100D",
+  "theme_color": "#12100D",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/last-alibi-mark.png", "sizes": "1254x1254", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
