@@ -18,6 +18,8 @@ export function createDefaultPlayerState(): PlayerState {
       casesStarted: 0,
       casesSolved: 0,
       firstTrySolves: 0,
+      perfectSolves: 0,
+      noHintSolves: 0,
       totalWrongGuesses: 0,
       totalHintsUsed: 0,
       totalSolveSeconds: 0,

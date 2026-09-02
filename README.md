@@ -19,7 +19,7 @@ Core play, progression, Daily Cases, generated cases, settings, and statistics w
 
 ## Requirements
 
-- Node.js `20.19.4+`, `22.13.0+`, or a newer supported LTS release
+- Node.js `22.13.0+` from the Node 22 LTS line
 - npm
 - For Android development: Android Studio/emulator or an Android device with Expo Go
 - For signed store builds: an Expo account and EAS credentials
@@ -43,6 +43,20 @@ On PowerShell:
 ```powershell
 Copy-Item .env.example .env
 ```
+
+The game has no application API, database, account service, or server-side secret. All cases, generation, scoring, and saves run on the device. The only optional network services are PostHog analytics and Sentry crash reporting:
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `EXPO_PUBLIC_POSTHOG_KEY` | No | PostHog project API key, normally beginning with `phc_` |
+| `EXPO_PUBLIC_POSTHOG_HOST` | No | PostHog ingestion URL; defaults to `https://us.i.posthog.com` |
+| `EXPO_PUBLIC_SENTRY_DSN` | No | Client DSN from the Sentry project settings |
+| `SENTRY_ORG` | No | Sentry organization slug used only for release source-map upload |
+| `SENTRY_PROJECT` | No | Sentry project slug used only for release source-map upload |
+| `SENTRY_AUTH_TOKEN` | No | Secret Sentry source-map upload token; use only in trusted build CI |
+| `SENTRY_DISABLE_AUTO_UPLOAD` | No | Set to `true` for native builds without all three Sentry upload values; local APK scripts do this automatically |
+
+Anything prefixed with `EXPO_PUBLIC_` is compiled into the app and must be treated as public. Never put a private API key or `SENTRY_AUTH_TOKEN` in an `EXPO_PUBLIC_` variable. PostHog and Sentry remain completely disabled when their public key/DSN is empty.
 
 ## Run
 
@@ -80,7 +94,7 @@ npx expo export --platform android --output-dir dist-android
 npm run build:web
 ```
 
-Deploy the generated `dist/` directory to any HTTPS static host. Configure the host to serve clean `.html` routes or fall back unknown routes to `index.html`. The included `manifest.json` and `sw.js` are copied from `public/`; the service worker precaches the generated app shell and caches same-origin assets as they are used.
+Deploy the generated `dist/` directory to any HTTPS static host. Configure the host to serve clean `.html` routes or fall back unknown routes to `index.html`. The included `manifest.json` and `sw.js` are copied from `public/`; the service worker precaches the generated app shell and bundled game assets for offline play.
 
 For a local production preview:
 
@@ -90,11 +104,38 @@ npx serve@latest dist
 
 Service workers require HTTPS in production and are enabled on localhost for development previews.
 
+### Coolify
+
+The recommended Coolify deployment uses the included multi-stage `Dockerfile` and production Nginx configuration:
+
+1. Create an Application from this Git repository and choose **Dockerfile** as the build pack.
+2. Set the Dockerfile location to `/Dockerfile`, the base directory to `/`, and the exposed port to `80`.
+3. Set the health-check path to `/healthz`.
+4. Add the public HTTPS domain. No volume, database, persistent storage, start command, or separate API service is required.
+5. Deploy. Nginx serves the static Expo export, handles Expo Router fallback routes, compresses text assets, and applies long-lived caching only to fingerprinted files.
+
+The Docker build pins the Node 22 major line and uses `npm ci`. Coolify does not need a build command or publish-directory override when the Dockerfile build pack is selected.
+
+No environment variables are required. If analytics or crash reporting are wanted, add `EXPO_PUBLIC_POSTHOG_KEY`, `EXPO_PUBLIC_POSTHOG_HOST`, and/or `EXPO_PUBLIC_SENTRY_DSN` in Coolify and enable **Build Variable** for each one. Expo substitutes these values while creating the browser bundle, so changing them requires a redeploy; runtime-only variables cannot change an already-built static bundle.
+
+The Docker build deliberately does not accept `SENTRY_AUTH_TOKEN` as a build argument because Docker build arguments are not a safe secret transport. Crash reporting still works with the public DSN. Configure `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` in EAS or another trusted CI environment only when source-map upload is required.
+
+For a Coolify Nixpacks static-site deployment instead, set `NIXPACKS_NODE_VERSION=22` as a build variable, use `npm ci` as the install command, `npm run build:web` as the build command, enable **Is it a static site?**, and set the output directory to `dist`. Ensure its Nginx configuration falls back unknown application routes to `/index.html`.
+
+Suggested runtime limits are one shared CPU and 128 MB RAM for the final Nginx container. The Expo build is the heavier phase and should be allowed at least 1 GB RAM. The runtime needs no persistent disk beyond the container image.
+
 ## Android builds
 
 `app.json` defines the Android application ID as `com.lastalibi.game`. Build profiles live in `eas.json`:
 
-To create a directly installable APK locally, install JDK 17+ plus Android SDK API 36, Build Tools 36.0.0, and NDK 27.1.12297006, then set `JAVA_HOME` and `ANDROID_HOME` and run:
+To create a directly installable APK locally, install JDK 17+ plus Android SDK API 36, Build Tools 36.0.0, and NDK 27.1.12297006, then set `JAVA_HOME` and `ANDROID_HOME`. On Linux/macOS run:
+
+```bash
+npx expo prebuild --platform android --no-install
+npm run build:apk:linux
+```
+
+On Windows PowerShell run:
 
 ```powershell
 npx expo prebuild --platform android

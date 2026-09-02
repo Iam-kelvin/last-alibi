@@ -29,6 +29,9 @@ if (-not $env:ANDROID_HOME -or -not (Test-Path -LiteralPath $env:ANDROID_HOME)) 
 
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 $env:NODE_ENV = 'production'
+if (-not $env:SENTRY_ORG -or -not $env:SENTRY_PROJECT -or -not $env:SENTRY_AUTH_TOKEN) {
+  $env:SENTRY_DISABLE_AUTO_UPLOAD = 'true'
+}
 if (-not $env:GRADLE_USER_HOME) {
   # Keep dependency paths short enough for Windows native build tools.
   $env:GRADLE_USER_HOME = Join-Path $env:LOCALAPPDATA 'la-gradle'

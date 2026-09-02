@@ -23,7 +23,7 @@ export default function ArchiveScreen() {
 
   return (
     <Screen>
-      <AppHeader title="Case Archive" subtitle={`${curatedSolved} closed Â· ${CURATED_CASES.length - curatedSolved} awaiting`} />
+      <AppHeader title="Case Archive" subtitle={`${curatedSolved} closed · ${CURATED_CASES.length - curatedSolved} awaiting`} />
       <View style={styles.filters}>
         {(['all', 'closed', 'open'] as const).map((item) => (
           <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: filter === item }} onPress={() => setFilter(item)} style={[styles.filter, { borderColor: filter === item ? palette.gold : palette.border, backgroundColor: filter === item ? `${palette.gold}18` : palette.surface }]}>
@@ -54,8 +54,8 @@ export default function ArchiveScreen() {
                       <Text style={[styles.fileTitle, { color: palette.text, fontSize: 16 * scale }]}>{caseFile.title}</Text>
                       <Badge label={caseFile.difficulty} />
                     </View>
-                    <Text style={[styles.fileMeta, { color: palette.muted, fontSize: 12 * scale }]}>{chapter.title} Â· {caseFile.type}</Text>
-                    <Body muted style={styles.fileIntro}>{chapterUnlocked ? caseFile.introduction : `Locked â€” close ${chapter.requiredSolved - curatedSolved} more curated cases.`}</Body>
+                    <Text style={[styles.fileMeta, { color: palette.muted, fontSize: 12 * scale }]}>{chapter.title} · {caseFile.type}</Text>
+                    <Body muted style={styles.fileIntro}>{chapterUnlocked ? caseFile.introduction : `Locked — close ${chapter.requiredSolved - curatedSolved} more curated cases.`}</Body>
                     {record ? <Text style={[styles.score, { color: palette.success }]}>Best score {record.score.toLocaleString()}</Text> : null}
                   </View>
                 </Card>
@@ -70,7 +70,7 @@ export default function ArchiveScreen() {
 
 const styles = StyleSheet.create({
   filters: { flexDirection: 'row', gap: 8, marginVertical: 16 },
-  filter: { flex: 1, minHeight: 42, borderWidth: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  filter: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   filterText: { fontWeight: '800', letterSpacing: 0.8 },
   list: { gap: 11 },
   file: { flexDirection: 'row', gap: 13 },

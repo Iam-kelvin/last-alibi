@@ -128,6 +128,8 @@ export interface PlayerStats {
   casesStarted: number;
   casesSolved: number;
   firstTrySolves: number;
+  perfectSolves: number;
+  noHintSolves: number;
   totalWrongGuesses: number;
   totalHintsUsed: number;
   totalSolveSeconds: number;

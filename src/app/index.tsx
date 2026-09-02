@@ -68,7 +68,7 @@ export default function HomeScreen() {
         <ModeCard title="Rapid Deduction" subtitle="Three minutes. Close as many as you can." icon="flash-outline" accent={palette.crimson} onPress={() => router.push('/rapid')} badge={state.bestRapidScore ? `Best ${state.bestRapidScore}` : undefined} />
       </View>
 
-      <SectionTitle action={<Pressable accessibilityRole="button" onPress={() => router.push('/stats')}><Text style={[styles.textAction, { color: palette.gold }]}>Full stats</Text></Pressable>}>Your desk</SectionTitle>
+      <SectionTitle action={<Pressable accessibilityRole="button" accessibilityLabel="Open full stats" hitSlop={8} onPress={() => router.push('/stats')} style={styles.textActionTarget}><Text style={[styles.textAction, { color: palette.gold }]}>Full stats</Text></Pressable>}>Your desk</SectionTitle>
       <View style={styles.metrics}>
         <Metric icon="flame-outline" value={state.currentDailyStreak} label="Day streak" />
         <Metric icon="checkmark-done-outline" value={state.stats.casesSolved} label="Solved" />
@@ -141,4 +141,5 @@ const styles = StyleSheet.create({
   quickLinks: { gap: 10, marginTop: 20 },
   quickLink: { minHeight: 54, borderWidth: 1, borderRadius: 13, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
   textAction: { fontWeight: '800', fontSize: 13 },
+  textActionTarget: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
 });

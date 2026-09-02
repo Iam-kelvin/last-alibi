@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Badge, Body, Button, Card, Divider, Eyebrow, ProgressBar, Screen, SectionTitle, Title, useTextScale } from '@/components/ui';
 import { calculateScore } from '@/game/scoring';
@@ -24,9 +24,11 @@ interface CasePlayerProps {
   dateKey?: string;
   showIntro?: boolean;
   remainingSeconds?: number;
+  deadlineMs?: number;
   continueLabel?: string;
   onContinue(summary: SolvedSummary): void;
   onSolved?(summary: SolvedSummary): void;
+  onExpired?(): void;
   onExit?(): void;
 }
 
@@ -44,9 +46,11 @@ export function CasePlayer({
   dateKey,
   showIntro = true,
   remainingSeconds,
+  deadlineMs,
   continueLabel = mode === 'endless' ? 'Next endless case' : 'Return to case files',
   onContinue,
   onSolved,
+  onExpired,
   onExit,
 }: CasePlayerProps) {
   const palette = usePalette();
@@ -64,6 +68,7 @@ export function CasePlayer({
   const [summary, setSummary] = useState<SolvedSummary | null>(null);
   const startedAt = useRef<number | null>(null);
   const hasStarted = useRef(false);
+  const completionSubmitted = useRef(false);
 
   const beginInvestigation = () => {
     if (!hasStarted.current) {
@@ -93,6 +98,10 @@ export function CasePlayer({
     }, 1000);
     return () => clearInterval(timer);
   }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'results') AccessibilityInfo.announceForAccessibility(`Case closed. ${caseFile.answer.label}.`);
+  }, [caseFile.answer.label, phase]);
 
   const availableTabs = useMemo<InvestigationTab[]>(
     () => caseFile.timeline.length ? ['suspects', 'evidence', 'timeline', 'notes', 'decision'] : ['suspects', 'evidence', 'notes', 'decision'],
@@ -124,18 +133,23 @@ export function CasePlayer({
   };
 
   const confirmDecision = () => {
-    if (!selectedTarget) return;
+    if (!selectedTarget || completionSubmitted.current) return;
+    if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
+      onExpired?.();
+      return;
+    }
     if (!isCorrectAnswer(caseFile, selectedTarget)) {
       const nextWrong = wrongGuesses + 1;
       setWrongGuesses(nextWrong);
       setSelectedTarget(null);
-      setFeedbackMessage(nextWrong === 1 ? `Not quite. ${caseFile.hints[0]!.text}` : 'That conclusion still fits the evidence. Test another contradiction.');
+      setFeedbackMessage(nextWrong === 1 ? 'Not quite. That conclusion still fits the evidence—compare the marked facts and try again.' : 'That conclusion still fits the evidence. Test another contradiction.');
       feedback.play('incorrect');
       track('wrong_guess', { case_id: caseFile.id, mode, guess_number: nextWrong });
       track('case_failed', { case_id: caseFile.id, mode, recoverable: true });
       return;
     }
 
+    completionSubmitted.current = true;
     const finalElapsed = Math.max(1, startedAt.current ? Math.floor((Date.now() - startedAt.current) / 1000) : elapsedSeconds);
     const breakdown = calculateScore({
       difficulty: caseFile.difficulty,
@@ -167,12 +181,12 @@ export function CasePlayer({
             <Badge label={caseFile.difficulty} tone="gold" />
             <Badge label={caseFile.type} />
           </View>
-          <Eyebrow>Case file Â· {caseFile.location}</Eyebrow>
+          <Eyebrow>Case file · {caseFile.location}</Eyebrow>
           <Title>{caseFile.title}</Title>
           <Body muted style={styles.introText}>{caseFile.introduction}</Body>
         </View>
         <Card paper style={styles.objectiveCard}>
-          <Text style={[styles.objectiveLabel, { color: palette.crimson, fontSize: 11 * scale }]}>YOUR OBJECTIVE</Text>
+          <Text style={[styles.objectiveLabel, { color: palette.paperAccent, fontSize: 11 * scale }]}>YOUR OBJECTIVE</Text>
           <Text style={[styles.objectiveText, { color: palette.paperText, fontSize: 19 * scale, lineHeight: 27 * scale }]}>{caseFile.objective}</Text>
         </Card>
         <View style={styles.metaRow}>
@@ -199,7 +213,7 @@ export function CasePlayer({
         </View>
 
         <Card paper>
-          <Text style={[styles.reasoningLabel, { color: palette.crimson, fontSize: 11 * scale }]}>THE REASONING</Text>
+          <Text style={[styles.reasoningLabel, { color: palette.paperAccent, fontSize: 11 * scale }]}>THE REASONING</Text>
           <Text style={[styles.reasoningText, { color: palette.paperText, fontSize: 16 * scale, lineHeight: 25 * scale }]}>{caseFile.explanation}</Text>
         </Card>
 
@@ -238,7 +252,7 @@ export function CasePlayer({
         </Pressable>
         <View style={styles.caseHeading}>
           <Text numberOfLines={1} style={[styles.caseHeadingTitle, { color: palette.text, fontSize: 16 * scale }]}>{caseFile.title}</Text>
-          <Text style={[styles.caseHeadingMeta, { color: palette.muted, fontSize: 11 * scale }]}>{caseFile.type} Â· {caseFile.difficulty}</Text>
+          <Text style={[styles.caseHeadingMeta, { color: palette.muted, fontSize: 11 * scale }]}>{caseFile.type} · {caseFile.difficulty}</Text>
         </View>
         <View style={styles.timerWrap}>
           <Ionicons name="time-outline" color={remainingSeconds !== undefined && remainingSeconds < 20 ? palette.crimson : palette.gold} size={17} />
@@ -356,11 +370,11 @@ function EvidenceTab({ caseFile, highlights, toggleHighlight }: TabProps) {
               }}
               style={({ pressed }) => [styles.evidencePressable, pressed && styles.pressOpacity]}
             >
-              <Card paper style={[styles.evidenceCard, marked && { borderColor: palette.crimson, borderWidth: 2 }]}>
+              <Card paper style={[styles.evidenceCard, marked && { borderColor: palette.paperAccent, borderWidth: 2 }]}>
                 <View style={styles.evidenceHeading}>
-                  <Ionicons name={evidenceIcon(item.type)} size={24} color={palette.crimson} />
+                  <Ionicons name={evidenceIcon(item.type)} size={24} color={palette.paperAccent} />
                   <Text style={[styles.evidenceTitle, { color: palette.paperText, fontSize: 16 * scale }]}>{item.title}</Text>
-                  <Ionicons name={marked ? 'bookmark' : 'bookmark-outline'} size={20} color={marked ? palette.crimson : palette.paperText} />
+                  <Ionicons name={marked ? 'bookmark' : 'bookmark-outline'} size={20} color={marked ? palette.paperAccent : palette.paperText} />
                 </View>
                 <Text style={[styles.evidenceBody, { color: palette.paperText, fontSize: 14 * scale, lineHeight: 21 * scale }]}>{item.description}</Text>
               </Card>
@@ -413,7 +427,7 @@ function NotesTab({ caseFile, highlights, toggleHighlight }: TabProps) {
   const highlighted = [
     ...caseFile.statements.map((item) => ({ id: item.id, title: item.title, body: item.text, kind: 'Statement' })),
     ...caseFile.evidence.map((item) => ({ id: item.id, title: item.title, body: item.description, kind: 'Evidence' })),
-    ...caseFile.timeline.map((item) => ({ id: item.id, title: `${item.time} Â· ${item.title}`, body: item.description, kind: 'Timeline' })),
+    ...caseFile.timeline.map((item) => ({ id: item.id, title: `${item.time} · ${item.title}`, body: item.description, kind: 'Timeline' })),
   ].filter((item) => highlights.includes(item.id));
   return (
     <View>
@@ -505,7 +519,7 @@ function ScoreRow({ label, value, positive, penalty }: { label: string; value: n
     <View style={styles.scoreRow}>
       <Body muted>{label}</Body>
       <Body style={{ color: penalty && value ? palette.crimson : positive && value ? palette.success : palette.text }}>
-        {penalty && value ? 'âˆ’' : positive && value ? '+' : ''}{value.toLocaleString()}
+        {penalty && value ? '−' : positive && value ? '+' : ''}{value.toLocaleString()}
       </Body>
     </View>
   );

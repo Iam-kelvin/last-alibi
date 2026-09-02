@@ -65,7 +65,7 @@ export default function CaseFilesScreen() {
                         </View>
                         <View style={styles.caseCopy}>
                           <Text style={[styles.caseTitle, { color: palette.text, fontSize: 16 * scale }]}>{caseFile.title}</Text>
-                          <Text style={[styles.caseMeta, { color: palette.muted, fontSize: 12 * scale }]}>{caseFile.location} Â· {caseFile.type}</Text>
+                          <Text style={[styles.caseMeta, { color: palette.muted, fontSize: 12 * scale }]}>{caseFile.location} · {caseFile.type}</Text>
                           {record ? <Text style={[styles.bestScore, { color: palette.success, fontSize: 11 * scale }]}>BEST {record.score.toLocaleString()} PTS</Text> : null}
                         </View>
                         <Ionicons name="chevron-forward" size={20} color={palette.muted} />

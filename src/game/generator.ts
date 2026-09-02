@@ -222,3 +222,9 @@ export function generateCase(seed: string, options: GenerateOptions = {}): CaseD
   const random = createSeededRandom(`${seed}:template:v${CASE_GENERATOR_VERSION}`);
   return pick(GENERATORS, random)(seed, options);
 }
+
+export function generateUnlockedCase(seed: string, difficulties: Difficulty[]): CaseDefinition {
+  const pool = difficulties.length ? difficulties : ['Beginner' as const];
+  const difficulty = pool[hashSeed(`${seed}:difficulty:v${CASE_GENERATOR_VERSION}`) % pool.length]!;
+  return generateCase(seed, { difficulty });
+}

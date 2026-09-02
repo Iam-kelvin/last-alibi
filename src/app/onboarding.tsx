@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
 import { Body, Button, Card, Eyebrow, ProgressBar, Screen, Title, useTextScale } from '@/components/ui';
 import { track } from '@/services/analytics';
@@ -37,6 +37,7 @@ export default function OnboardingScreen() {
   const current = STEPS[step]!;
 
   useEffect(() => { track('tutorial_started'); }, []);
+  useEffect(() => { AccessibilityInfo.announceForAccessibility(`Briefing ${step + 1} of ${STEPS.length}. ${current.title}`); }, [current.title, step]);
 
   const next = () => {
     if (step < STEPS.length - 1) setStep((value) => value + 1);
@@ -61,7 +62,7 @@ export default function OnboardingScreen() {
         <Body muted style={styles.center}>{current.body}</Body>
       </View>
       <Card paper style={styles.exampleCard}>
-        <Text style={[styles.exampleLabel, { color: palette.crimson, fontSize: 11 * scale }]}>{current.exampleTitle.toUpperCase()}</Text>
+        <Text style={[styles.exampleLabel, { color: palette.paperAccent, fontSize: 11 * scale }]}>{current.exampleTitle.toUpperCase()}</Text>
         <Text style={[styles.exampleText, { color: palette.paperText, fontSize: 17 * scale, lineHeight: 25 * scale }]}>{current.example}</Text>
       </Card>
       <View style={styles.actions}>

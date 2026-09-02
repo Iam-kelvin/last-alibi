@@ -24,7 +24,7 @@ export function Screen({ children, scroll = true, contentStyle }: PropsWithChild
   const palette = usePalette();
   const body = <View style={[styles.screenContent, contentStyle]}>{children}</View>;
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: palette.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: palette.background }]} edges={['top', 'bottom', 'left', 'right']}>
       <View pointerEvents="none" style={styles.atmosphere}>
         <LinearGradient colors={[`${palette.gold}14`, 'transparent', `${palette.crimson}0D`]} style={StyleSheet.absoluteFill} />
       </View>
@@ -44,7 +44,11 @@ export function AppHeader({ title, subtitle, back = true, right }: { title: stri
           accessibilityRole="button"
           accessibilityLabel="Go back"
           hitSlop={10}
-          onPress={() => { feedback.play('tap'); router.back(); }}
+          onPress={() => {
+            feedback.play('tap');
+            if (router.canGoBack()) router.back();
+            else router.replace('/');
+          }}
           style={({ pressed }) => [styles.iconButton, { borderColor: palette.border }, pressed && styles.pressed]}
         >
           <Ionicons name="arrow-back" color={palette.text} size={22} />
@@ -68,13 +72,19 @@ export function Eyebrow({ children }: PropsWithChildren) {
 export function Title({ children, style }: PropsWithChildren<{ style?: StyleProp<TextStyle> }>) {
   const palette = usePalette();
   const scale = useTextScale();
-  return <Text style={[styles.title, { color: palette.text, fontSize: 32 * scale }, style]}>{children}</Text>;
+  const custom = StyleSheet.flatten(style);
+  const baseFontSize = custom?.fontSize ?? 32;
+  const baseLineHeight = custom?.lineHeight ?? Math.ceil(baseFontSize * 1.2);
+  return <Text style={[styles.title, style, { color: palette.text, fontSize: baseFontSize * scale, lineHeight: baseLineHeight * scale }]}>{children}</Text>;
 }
 
 export function Body({ children, muted = false, style }: PropsWithChildren<{ muted?: boolean; style?: StyleProp<TextStyle> }>) {
   const palette = usePalette();
   const scale = useTextScale();
-  return <Text style={[styles.body, { color: muted ? palette.muted : palette.text, fontSize: 15 * scale, lineHeight: 23 * scale }, style]}>{children}</Text>;
+  const custom = StyleSheet.flatten(style);
+  const baseFontSize = custom?.fontSize ?? 15;
+  const baseLineHeight = custom?.lineHeight ?? Math.ceil(baseFontSize * 1.53);
+  return <Text style={[styles.body, style, { color: custom?.color ?? (muted ? palette.muted : palette.text), fontSize: baseFontSize * scale, lineHeight: baseLineHeight * scale }]}>{children}</Text>;
 }
 
 export function SectionTitle({ children, action }: PropsWithChildren<{ action?: ReactNode }>) {
@@ -135,7 +145,7 @@ export function Button({
   const colors: Record<ButtonVariant, { background: string; border: string; text: string }> = {
     primary: { background: palette.gold, border: palette.gold, text: palette.paperText },
     secondary: { background: palette.elevated, border: palette.borderStrong, text: palette.text },
-    danger: { background: palette.crimson, border: palette.crimson, text: '#FFF8F2' },
+    danger: { background: palette.paperAccent, border: palette.paperAccent, text: '#FFF8F2' },
     ghost: { background: 'transparent', border: palette.border, text: palette.muted },
   };
   const color = colors[variant];
@@ -160,10 +170,12 @@ export function Button({
   );
 }
 
-export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'gold' | 'success' | 'danger' }) {
+export function Badge({ label, tone = 'neutral', onPaper = false }: { label: string; tone?: 'neutral' | 'gold' | 'success' | 'danger'; onPaper?: boolean }) {
   const palette = usePalette();
   const scale = useTextScale();
-  const color = tone === 'gold' ? palette.gold : tone === 'success' ? palette.success : tone === 'danger' ? palette.crimson : palette.muted;
+  const color = onPaper
+    ? tone === 'success' ? '#315E3C' : tone === 'gold' ? '#694A14' : tone === 'danger' ? palette.paperAccent : '#554A3B'
+    : tone === 'gold' ? palette.gold : tone === 'success' ? palette.success : tone === 'danger' ? palette.crimson : palette.muted;
   return (
     <View style={[styles.badge, { borderColor: `${color}88`, backgroundColor: `${color}16` }]}>
       <Text style={[styles.badgeText, { color, fontSize: 10 * scale }]}>{label}</Text>
@@ -205,7 +217,7 @@ export function EmptyState({ icon = 'file-tray-outline', title, message, action 
   );
 }
 
-export function LoadingState({ label = 'Opening the case fileâ€¦' }: { label?: string }) {
+export function LoadingState({ label = 'Opening the case file…' }: { label?: string }) {
   const palette = usePalette();
   return (
     <View style={styles.loading} accessibilityRole="progressbar" accessibilityLabel={label}>
@@ -238,7 +250,7 @@ const styles = StyleSheet.create({
   headerSubtitle: { marginTop: 2 },
   headerRight: { minWidth: 44, alignItems: 'flex-end' },
   eyebrow: { textTransform: 'uppercase', letterSpacing: 2.2, fontWeight: '800', marginBottom: 7 },
-  title: { fontWeight: '900', letterSpacing: -0.8, lineHeight: 38 },
+  title: { fontWeight: '900', letterSpacing: -0.8 },
   body: { fontWeight: '400' },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 22, marginBottom: 11 },
   sectionTitle: { fontWeight: '800', letterSpacing: 0.1, flexShrink: 1 },
@@ -248,10 +260,10 @@ const styles = StyleSheet.create({
   },
   button: { minHeight: 44, borderWidth: 1, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   buttonRegular: { paddingHorizontal: 20, paddingVertical: 13 },
-  buttonCompact: { paddingHorizontal: 12, paddingVertical: 8, minHeight: 38 },
+  buttonCompact: { paddingHorizontal: 12, paddingVertical: 8, minHeight: 44 },
   buttonText: { fontWeight: '800', letterSpacing: 0.2, textAlign: 'center' },
   pressed: { opacity: 0.72, transform: [{ scale: 0.985 }] },
-  badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, alignSelf: 'flex-start' },
+  badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, minHeight: 28, justifyContent: 'center', alignSelf: 'flex-start' },
   badgeText: { textTransform: 'uppercase', letterSpacing: 1, fontWeight: '800' },
   progressTrack: { height: 7, borderRadius: 99, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 99 },

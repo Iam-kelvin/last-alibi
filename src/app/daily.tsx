@@ -23,7 +23,7 @@ export default function DailyScreen() {
         <View style={[styles.calendar, { backgroundColor: `${palette.gold}1A`, borderColor: palette.goldSoft }]}>
           <Ionicons name="calendar" size={35} color={palette.gold} />
         </View>
-        <Eyebrow>{official ? 'Official result recorded' : 'Todayâ€™s shared mystery'}</Eyebrow>
+        <Eyebrow>{official ? 'Official result recorded' : 'Today’s shared mystery'}</Eyebrow>
         <Title style={styles.center}>{caseFile.title}</Title>
         <Body muted style={styles.center}>{caseFile.introduction}</Body>
       </View>
@@ -48,12 +48,12 @@ export default function DailyScreen() {
         </Card>
       ) : (
         <Card paper>
-          <Text style={[styles.ruleTitle, { color: palette.crimson, fontSize: 12 * scale }]}>DAILY RULE</Text>
-          <Text style={[styles.ruleText, { color: palette.paperText, fontSize: 16 * scale, lineHeight: 24 * scale }]}>Your first solve becomes todayâ€™s official score. The date and generator version guarantee the same mystery for every player, even offline.</Text>
+          <Text style={[styles.ruleTitle, { color: palette.paperAccent, fontSize: 12 * scale }]}>DAILY RULE</Text>
+          <Text style={[styles.ruleText, { color: palette.paperText, fontSize: 16 * scale, lineHeight: 24 * scale }]}>Your first solve becomes today’s official score. The date and generator version guarantee the same mystery for every player, even offline.</Text>
         </Card>
       )}
       <Button
-        label={official ? 'Replay todayâ€™s case' : 'Start official case'}
+        label={official ? 'Replay today’s case' : 'Start official case'}
         icon={official ? 'refresh' : 'finger-print'}
         onPress={() => router.push({ pathname: '/case/[id]', params: { id: caseFile.id, mode: 'daily', seed: dateKey, dateKey } })}
         style={styles.start}

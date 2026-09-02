@@ -50,12 +50,14 @@ export function FeedbackProvider({ children }: PropsWithChildren) {
       player.seekTo(0).then(() => player.play()).catch((error) => reportError(error, { operation: 'sound_effect', effect }));
     }
     if (state.settings.haptics) {
-      const feedback = effect === 'correct' || effect === 'achievement'
-        ? Haptics.NotificationFeedbackType.Success
+      const haptic = effect === 'correct' || effect === 'achievement'
+        ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
         : effect === 'incorrect'
-          ? Haptics.NotificationFeedbackType.Error
-          : Haptics.NotificationFeedbackType.Warning;
-      Haptics.notificationAsync(feedback).catch(() => undefined);
+          ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+          : effect === 'clue'
+            ? Haptics.selectionAsync()
+            : Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      haptic.catch(() => undefined);
     }
   }, [ambient, players, state.settings.haptics, state.settings.music, state.settings.sound]);
 

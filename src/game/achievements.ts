@@ -13,10 +13,10 @@ const solvedByType = (state: PlayerState, type: string) =>
 
 export const ACHIEVEMENTS: AchievementDefinition[] = [
   { id: 'first-case', title: 'First Case Closed', description: 'Solve your first case.', icon: '✓', isUnlocked: (s) => s.stats.casesSolved >= 1 },
-  { id: 'perfect-deduction', title: 'Perfect Deduction', description: 'Solve on the first try without a hint.', icon: '◆', isUnlocked: (s) => Object.values(s.completedCases).some((r) => r.firstTry && r.hintsUsed === 0) },
+  { id: 'perfect-deduction', title: 'Perfect Deduction', description: 'Solve on the first try without a hint.', icon: '◆', isUnlocked: (s) => s.stats.perfectSolves >= 1 || Object.values(s.completedCases).some((r) => r.firstTry && r.hintsUsed === 0) },
   { id: 'ten-closed', title: '10 Cases Closed', description: 'Solve ten cases.', icon: '10', isUnlocked: (s) => s.stats.casesSolved >= 10 },
   { id: 'hundred-closed', title: '100 Cases Closed', description: 'Solve one hundred cases.', icon: '100', isUnlocked: (s) => s.stats.casesSolved >= 100 },
-  { id: 'no-hint', title: 'No Hint Needed', description: 'Close five cases without hints.', icon: '✦', isUnlocked: (s) => Object.values(s.completedCases).filter((r) => r.hintsUsed === 0).length >= 5 },
+  { id: 'no-hint', title: 'No Hint Needed', description: 'Close five cases without hints.', icon: '✦', isUnlocked: (s) => s.stats.noHintSolves >= 5 || Object.values(s.completedCases).filter((r) => r.hintsUsed === 0).length >= 5 },
   { id: 'seven-streak', title: 'Seven-Day Streak', description: 'Close the Daily Case seven days running.', icon: '7', isUnlocked: (s) => s.longestDailyStreak >= 7 },
   { id: 'thirty-streak', title: 'Thirty-Day Streak', description: 'Close the Daily Case thirty days running.', icon: '30', isUnlocked: (s) => s.longestDailyStreak >= 30 },
   { id: 'alibi-breaker', title: 'Alibi Breaker', description: 'Solve five Broken Alibi cases.', icon: '⌁', isUnlocked: (s) => solvedByType(s, 'Broken Alibi') >= 5 },

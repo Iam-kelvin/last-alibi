@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -21,28 +21,43 @@ export default function RapidScreen() {
   const [score, setScore] = useState(0);
   const [solved, setSolved] = useState(0);
   const [bestAtStart, setBestAtStart] = useState(0);
-  const endAt = useRef(0);
+  const [deadlineMs, setDeadlineMs] = useState(0);
   const finished = useRef(false);
+  const scoreRef = useRef(0);
+  const solvedRef = useRef(0);
   const { state, completeRapid } = useGame();
   const palette = usePalette();
   const scale = useTextScale();
+  const navigation = useNavigation();
 
   const finishSession = useCallback(() => {
     if (finished.current) return;
     finished.current = true;
     setStage('finished');
-    completeRapid(score, solved);
-  }, [completeRapid, score, solved]);
+    const finalScore = scoreRef.current;
+    const finalSolved = solvedRef.current;
+    setScore(finalScore);
+    setSolved(finalSolved);
+    completeRapid(finalScore, finalSolved);
+  }, [completeRapid]);
+
+  useEffect(() => {
+    if (stage !== 'running') return;
+    return navigation.addListener('beforeRemove', (event) => {
+      event.preventDefault();
+      finishSession();
+    });
+  }, [finishSession, navigation, stage]);
 
   useEffect(() => {
     if (stage !== 'running') return;
     const timer = setInterval(() => {
-      const seconds = Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000));
+      const seconds = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000));
       setRemaining(seconds);
       if (seconds <= 0) finishSession();
     }, 250);
     return () => clearInterval(timer);
-  }, [finishSession, stage]);
+  }, [deadlineMs, finishSession, stage]);
 
   const difficulty: Difficulty = DIFFICULTIES[Math.min(3, Math.floor(caseIndex / 2))]!;
   const caseFile = useMemo(
@@ -58,15 +73,19 @@ export default function RapidScreen() {
     setRemaining(RAPID_SECONDS);
     setScore(0);
     setSolved(0);
+    scoreRef.current = 0;
+    solvedRef.current = 0;
     setBestAtStart(state.bestRapidScore);
-    endAt.current = Date.now() + RAPID_SECONDS * 1000;
+    setDeadlineMs(Date.now() + RAPID_SECONDS * 1000);
     setStage('running');
     track('rapid_started');
   };
 
   const recordSolved = (summary: SolvedSummary) => {
-    setScore((value) => value + summary.record.score);
-    setSolved((value) => value + 1);
+    scoreRef.current += summary.record.score;
+    solvedRef.current += 1;
+    setScore(scoreRef.current);
+    setSolved(solvedRef.current);
   };
 
   if (stage === 'running' && caseFile) {
@@ -77,8 +96,10 @@ export default function RapidScreen() {
         mode="rapid"
         showIntro={false}
         remainingSeconds={remaining}
+        deadlineMs={deadlineMs}
         continueLabel="Next rapid case"
         onExit={finishSession}
+        onExpired={finishSession}
         onSolved={recordSolved}
         onContinue={() => {
           if (remaining <= 0) finishSession();
@@ -101,7 +122,7 @@ export default function RapidScreen() {
         </View>
         <View style={styles.metrics}>
           <Metric icon="checkmark-done" value={solved} label="Closed" />
-          <Metric icon="time-outline" value={average ? `${average}s` : 'â€”'} label="Avg case" />
+          <Metric icon="time-outline" value={average ? `${average}s` : '—'} label="Avg case" />
           <Metric icon="trophy-outline" value={Math.max(score, state.bestRapidScore).toLocaleString()} label="Best" />
         </View>
         {score > bestAtStart ? (
@@ -123,7 +144,7 @@ export default function RapidScreen() {
         <Body muted style={styles.center}>Close as many compact cases as possible before time expires. The timer keeps running through results.</Body>
       </View>
       <Card paper>
-        <Text style={[styles.rulesTitle, { color: palette.crimson, fontSize: 11 * scale }]}>RAPID RULES</Text>
+        <Text style={[styles.rulesTitle, { color: palette.paperAccent, fontSize: 11 * scale }]}>RAPID RULES</Text>
         <Rule icon="time-outline" text="The session lasts exactly three minutes." />
         <Rule icon="trending-up-outline" text="Difficulty rises after every two closed cases." />
         <Rule icon="close-circle-outline" text="Wrong guesses and hints reduce each case score." />
@@ -137,7 +158,7 @@ export default function RapidScreen() {
 
 function Rule({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
   const palette = usePalette();
-  return <View style={styles.rule}><Ionicons name={icon} size={20} color={palette.crimson} /><Text style={[styles.ruleText, { color: palette.paperText }]}>{text}</Text></View>;
+  return <View style={styles.rule}><Ionicons name={icon} size={20} color={palette.paperAccent} /><Text style={[styles.ruleText, { color: palette.paperText }]}>{text}</Text></View>;
 }
 
 const styles = StyleSheet.create({

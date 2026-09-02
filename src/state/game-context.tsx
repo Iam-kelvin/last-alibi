@@ -14,7 +14,7 @@ type Action =
   | { type: 'hydrate'; state: PlayerState }
   | { type: 'tutorial-complete' }
   | { type: 'case-started' }
-  | { type: 'case-completed'; caseFile: CaseDefinition; record: CompletionRecord; dateKey?: string; awardXp: boolean }
+  | { type: 'case-completed'; caseFile: CaseDefinition; record: CompletionRecord; dateKey?: string }
   | { type: 'rapid-completed'; score: number }
   | { type: 'settings'; patch: Partial<PlayerSettings> }
   | { type: 'endless-next' }
@@ -30,19 +30,21 @@ function reducer(state: PlayerState, action: Action): PlayerState {
       return { ...state, stats: { ...state.stats, casesStarted: state.stats.casesStarted + 1 } };
     case 'case-completed': {
       const prior = state.completedCases[action.record.caseId];
+      const awardXp = !prior;
+      const record = awardXp ? action.record : { ...action.record, xpEarned: 0 };
       const completedCases = {
         ...state.completedCases,
-        [action.record.caseId]: prior && prior.score >= action.record.score ? prior : action.record,
+        [record.caseId]: prior && prior.score >= record.score ? prior : record,
       };
       const dailyResults = action.dateKey && !state.dailyResults[action.dateKey]
-        ? { ...state.dailyResults, [action.dateKey]: { ...action.record, dateKey: action.dateKey, official: true as const } }
+        ? { ...state.dailyResults, [action.dateKey]: { ...record, dateKey: action.dateKey, official: true as const } }
         : state.dailyResults;
       const currentDailyStreak = calculateDailyStreak(dailyResults);
       const curatedSolved = Object.keys(completedCases).filter((caseId) => CURATED_CASE_MAP[caseId]).length;
       const unlockedChapterIds = CHAPTERS.filter((chapter) => curatedSolved >= chapter.requiredSolved).map((chapter) => chapter.id);
       const next: PlayerState = {
         ...state,
-        xp: state.xp + (action.awardXp ? action.record.xpEarned : 0),
+        xp: state.xp + (awardXp ? record.xpEarned : 0),
         completedCases,
         unlockedChapterIds,
         dailyResults,
@@ -51,10 +53,12 @@ function reducer(state: PlayerState, action: Action): PlayerState {
         stats: {
           ...state.stats,
           casesSolved: state.stats.casesSolved + 1,
-          firstTrySolves: state.stats.firstTrySolves + (action.record.firstTry ? 1 : 0),
-          totalWrongGuesses: state.stats.totalWrongGuesses + action.record.wrongGuesses,
-          totalHintsUsed: state.stats.totalHintsUsed + action.record.hintsUsed,
-          totalSolveSeconds: state.stats.totalSolveSeconds + action.record.elapsedSeconds,
+          firstTrySolves: state.stats.firstTrySolves + (record.firstTry ? 1 : 0),
+          perfectSolves: state.stats.perfectSolves + (record.firstTry && record.hintsUsed === 0 ? 1 : 0),
+          noHintSolves: state.stats.noHintSolves + (record.hintsUsed === 0 ? 1 : 0),
+          totalWrongGuesses: state.stats.totalWrongGuesses + record.wrongGuesses,
+          totalHintsUsed: state.stats.totalHintsUsed + record.hintsUsed,
+          totalSolveSeconds: state.stats.totalSolveSeconds + record.elapsedSeconds,
           byType: {
             ...state.stats.byType,
             [action.caseFile.type]: state.stats.byType[action.caseFile.type] + 1,
@@ -139,7 +143,7 @@ export function GameProvider({ children }: PropsWithChildren) {
       completedAt: new Date().toISOString(),
       xpEarned: awardXp ? calculateXp(performance.score, caseFile.difficulty) : 0,
     };
-    dispatch({ type: 'case-completed', caseFile, record, dateKey, awardXp });
+    dispatch({ type: 'case-completed', caseFile, record, dateKey });
     track('case_completed', { case_id: caseFile.id, mode, score: record.score, hints: record.hintsUsed, first_try: record.firstTry });
     if (mode === 'daily' && dateKey && !state.dailyResults[dateKey]) {
       track('daily_completed', { date: dateKey, score: record.score });

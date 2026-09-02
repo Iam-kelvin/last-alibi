@@ -30,4 +30,43 @@ describe('curated case parser and validation', () => {
     expect(parseCase(JSON.parse(serialized))).toEqual(CURATED_CASES[0]);
     expect(() => parseCase('not-a-case')).toThrow('must be an object');
   });
+
+  it('reports malformed object payloads without throwing a property access error', () => {
+    expect(() => validateCase({} as never)).not.toThrow();
+    const result = validateCase({} as never);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('answer must be an object.');
+    expect(result.errors).toContain('suspects must be an array.');
+    expect(() => parseCase({})).toThrow('Invalid case "unknown"');
+  });
+
+  it('validates nested fields and requires a statement for every suspect', () => {
+    const invalid = structuredClone(CURATED_CASES[0]!);
+    invalid.suspects[0]!.name = '';
+    invalid.statements = invalid.statements.filter((statement) => statement.suspectId !== invalid.suspects[1]!.id);
+    invalid.evidence[0]!.description = '';
+
+    const result = validateCase(invalid);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('suspects[0].name is required.');
+    expect(result.errors).toContain('evidence[0].description is required.');
+    expect(result.errors).toContain(`suspect ${invalid.suspects[1]!.id} has no statement.`);
+  });
+
+  it('rejects invalid generated audit values instead of treating them as truthy', () => {
+    const invalid = structuredClone(CURATED_CASES[0]!);
+    invalid.source = 'generated';
+    invalid.generationAudit = {
+      candidateSolutions: Object.fromEntries(invalid.statements.map((statement) => [statement.id, false])),
+      evidenceConsistent: true,
+      distractorsPossible: true,
+      derivableFromShownInformation: true,
+    };
+    (invalid.generationAudit.candidateSolutions as Record<string, unknown>)[invalid.answer.targetId] = 'yes';
+
+    const result = validateCase(invalid);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('generated case audit candidates must be booleans.');
+    expect(result.errors).toContain('generated case audit does not prove one unique answer.');
+  });
 });

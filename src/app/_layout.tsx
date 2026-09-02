@@ -5,10 +5,11 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { Button } from '@/components/ui';
+import { Button, LoadingState, Screen } from '@/components/ui';
 import { initializeObservability, reportError, track } from '@/services/analytics';
 import { FeedbackProvider } from '@/services/feedback';
 import { GameProvider, useGame } from '@/state/game-context';
+import { DAYLIGHT, usePalette } from '@/theme';
 
 initializeObservability();
 
@@ -35,10 +36,14 @@ export default function RootLayout() {
 
 function AppNavigator() {
   const { state } = useGame();
+  const palette = usePalette();
+  if (!state.hydrated) {
+    return <Screen scroll={false}><LoadingState label="Restoring your case files…" /></Screen>;
+  }
   return (
-    <ThemeProvider value={{ ...DarkTheme, colors: { ...DarkTheme.colors, background: '#12100D', card: '#1B1814', text: '#F3EBDD', border: '#3A3329', primary: '#D2A85D' } }}>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, animation: state.settings.reducedMotion ? 'none' : 'fade', contentStyle: { backgroundColor: '#12100D' } }} />
+    <ThemeProvider value={{ ...DarkTheme, dark: palette !== DAYLIGHT, colors: { ...DarkTheme.colors, background: palette.background, card: palette.surface, text: palette.text, border: palette.border, primary: palette.gold } }}>
+      <StatusBar style={palette === DAYLIGHT ? 'dark' : 'light'} />
+      <Stack screenOptions={{ headerShown: false, animation: state.settings.reducedMotion ? 'none' : 'fade', contentStyle: { backgroundColor: palette.background } }} />
     </ThemeProvider>
   );
 }

@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader, Badge, Body, Button, Card, Eyebrow, Screen, Title, useTextScale } from '@/components/ui';
-import { generateCase } from '@/game/generator';
+import { CHAPTERS } from '@/data/chapters';
+import { generateUnlockedCase } from '@/game/generator';
 import { useGame } from '@/state/game-context';
 import { usePalette } from '@/theme';
 
@@ -12,7 +13,8 @@ export default function EndlessScreen() {
   const palette = usePalette();
   const scale = useTextScale();
   const seed = `endless-${state.endlessCounter}`;
-  const caseFile = generateCase(seed);
+  const unlockedDifficulties = CHAPTERS.filter((chapter) => state.unlockedChapterIds.includes(chapter.id)).map((chapter) => chapter.difficulty);
+  const caseFile = generateUnlockedCase(seed, unlockedDifficulties);
 
   return (
     <Screen>
@@ -26,13 +28,13 @@ export default function EndlessScreen() {
       <Card paper style={styles.preview}>
         <View style={styles.previewTop}>
           <View style={styles.previewCopy}>
-            <Text style={[styles.nextLabel, { color: palette.crimson, fontSize: 11 * scale }]}>NEXT FILE</Text>
+            <Text style={[styles.nextLabel, { color: palette.paperAccent, fontSize: 11 * scale }]}>NEXT FILE</Text>
             <Text style={[styles.nextTitle, { color: palette.paperText, fontSize: 23 * scale }]}>{caseFile.title}</Text>
             <Text style={[styles.nextLocation, { color: palette.paperText, fontSize: 13 * scale }]}>{caseFile.location}</Text>
           </View>
-          <Ionicons name="folder-open-outline" size={38} color={palette.crimson} />
+          <Ionicons name="folder-open-outline" size={38} color={palette.paperAccent} />
         </View>
-        <View style={styles.badges}><Badge label={caseFile.difficulty} tone="danger" /><Badge label={caseFile.type} /></View>
+        <View style={styles.badges}><Badge label={caseFile.difficulty} tone="danger" onPaper /><Badge label={caseFile.type} onPaper /></View>
         <Text style={[styles.previewIntro, { color: palette.paperText, fontSize: 15 * scale, lineHeight: 23 * scale }]}>{caseFile.introduction}</Text>
       </Card>
       <Button label="Open endless case" icon="arrow-forward" onPress={() => router.push({ pathname: '/case/[id]', params: { id: caseFile.id, mode: 'endless', seed } })} style={styles.start} />

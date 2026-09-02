@@ -12,7 +12,22 @@ export default function SettingsScreen() {
   const palette = usePalette();
   const scale = useTextScale();
   const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const settings = state.settings;
+
+  const handleReset = async () => {
+    setResetting(true);
+    setResetError(null);
+    try {
+      await resetProgress();
+      setConfirmReset(false);
+    } catch {
+      setResetError('Progress could not be erased. Your existing save is still available; please try again.');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <Screen>
@@ -66,13 +81,14 @@ export default function SettingsScreen() {
             <Text accessibilityLiveRegion="assertive" style={[styles.confirmTitle, { color: palette.crimson, fontSize: 18 * scale }]}>Erase all detective progress?</Text>
             <Body muted>This cannot be undone. Your settings will remain.</Body>
             <View style={styles.confirmActions}>
-              <Button label="Cancel" variant="ghost" onPress={() => setConfirmReset(false)} style={styles.confirmButton} />
-              <Button label="Erase progress" variant="danger" onPress={async () => { await resetProgress(); setConfirmReset(false); }} style={styles.confirmButton} />
+              <Button label="Cancel" variant="ghost" disabled={resetting} onPress={() => setConfirmReset(false)} style={styles.confirmButton} />
+              <Button label={resetting ? 'Erasing…' : 'Erase progress'} variant="danger" disabled={resetting} onPress={handleReset} style={styles.confirmButton} />
             </View>
+            {resetError ? <Body style={[styles.resetError, { color: palette.crimson }]}>{resetError}</Body> : null}
           </>
         )}
       </Card>
-      <Body muted style={styles.version}>The Last Alibi Â· Version 1.0.0 Â· Local save schema 1</Body>
+      <Body muted style={styles.version}>The Last Alibi · Version 1.0.0 · Local save schema 1</Body>
     </Screen>
   );
 }
@@ -109,7 +125,7 @@ const styles = StyleSheet.create({
   optionDescription: { marginTop: 4 },
   toggleDescription: { marginTop: 2, lineHeight: 17 },
   segmented: { flexDirection: 'row', padding: 4, borderWidth: 1, borderRadius: 12, marginTop: 12 },
-  segment: { flex: 1, minHeight: 42, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  segment: { flex: 1, minHeight: 44, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   segmentText: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
   privacyHeading: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   privacyText: { marginTop: 11 },
@@ -118,6 +134,7 @@ const styles = StyleSheet.create({
   confirmTitle: { fontWeight: '900', marginBottom: 6 },
   confirmActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   confirmButton: { flex: 1 },
+  resetError: { marginTop: 12 },
   version: { textAlign: 'center', marginTop: 20, fontSize: 11 },
 });
 
