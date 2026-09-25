@@ -51,4 +51,6 @@ example
 /.android-toolchain/
 /.gradle-local/
 /.maven-local/
-/artifacts/
+/artifacts/*
+!/artifacts/*.apk
+!/artifacts/SHA256SUMS.txt

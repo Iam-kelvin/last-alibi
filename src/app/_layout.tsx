@@ -1,11 +1,11 @@
 import { DarkTheme, Stack, ThemeProvider, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { Button, LoadingState, Screen } from '@/components/ui';
+import { LoadingState, Screen } from '@/components/ui';
 import { initializeObservability, reportError, track } from '@/services/analytics';
 import { FeedbackProvider } from '@/services/feedback';
 import { GameProvider, useGame } from '@/state/game-context';
@@ -54,7 +54,14 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
     <View style={styles.error}>
       <Text style={styles.errorTitle}>The case file would not open.</Text>
       <Text style={styles.errorText}>Your saved progress is safe. Try loading this screen again.</Text>
-      <Button label="Try again" onPress={retry} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Try again"
+        onPress={retry}
+        style={({ pressed }) => [styles.retryButton, pressed && styles.retryPressed]}
+      >
+        <Text style={styles.retryText}>Try again</Text>
+      </Pressable>
     </View>
   );
 }
@@ -64,4 +71,7 @@ const styles = StyleSheet.create({
   error: { flex: 1, backgroundColor: '#12100D', padding: 28, alignItems: 'center', justifyContent: 'center', gap: 16 },
   errorTitle: { color: '#F3EBDD', fontWeight: '900', fontSize: 24, textAlign: 'center' },
   errorText: { color: '#AAA08F', fontSize: 16, textAlign: 'center', maxWidth: 460 },
+  retryButton: { minHeight: 48, minWidth: 150, borderRadius: 12, backgroundColor: '#D2A85D', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  retryPressed: { opacity: 0.72 },
+  retryText: { color: '#211B15', fontSize: 15, fontWeight: '800' },
 });

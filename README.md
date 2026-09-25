@@ -128,21 +128,21 @@ Suggested runtime limits are one shared CPU and 128 MB RAM for the final Nginx c
 
 `app.json` defines the Android application ID as `com.lastalibi.game`. Build profiles live in `eas.json`:
 
-To create a directly installable APK locally, install JDK 17+ plus Android SDK API 36, Build Tools 36.0.0, and NDK 27.1.12297006, then set `JAVA_HOME` and `ANDROID_HOME`. On Linux/macOS run:
+The current directly installable Android release is [the-last-alibi-v1.0.0.apk](artifacts/the-last-alibi-v1.0.0.apk). Download it on an ARM64 Android 7.0 or newer device, allow installs from the browser or file manager when Android prompts, then open the downloaded file. Its SHA-256 checksum is recorded in [`artifacts/SHA256SUMS.txt`](artifacts/SHA256SUMS.txt).
+
+To create a directly installable APK locally, install JDK 17+ plus Android SDK API 36, Build Tools 36.0.0, and NDK 27.1.12297006, and keep at least 8 GB of disk space free for a clean native build. Set `JAVA_HOME` and `ANDROID_HOME` when they are not installed in their standard locations. On Linux/macOS run:
 
 ```bash
-npx expo prebuild --platform android --no-install
 npm run build:apk:linux
 ```
 
 On Windows PowerShell run:
 
 ```powershell
-npx expo prebuild --platform android
 npm run build:apk
 ```
 
-The APK is copied to `artifacts/the-last-alibi-v1.0.0.apk`. The local APK targets 64-bit ARM Android devices and is signed with the generated development keystore so it can be installed directly; use EAS-managed production credentials for store distribution.
+Both local APK commands run Expo prebuild first so changes in `app.json` and config plugins are synchronized into the generated native project. The APK is copied to `artifacts/the-last-alibi-v1.0.0.apk`. The local APK targets 64-bit ARM Android devices and is signed with the generated development keystore so it can be installed directly; use EAS-managed production credentials for store distribution.
 
 For remote builds:
 

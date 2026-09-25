@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
