@@ -62,7 +62,7 @@ export default function HomeScreen() {
 
       <SectionTitle>Choose a case file</SectionTitle>
       <View style={styles.modeGrid}>
-        <ModeCard title="Case Files" subtitle="Six chapters of curated mysteries" icon="albums-outline" accent={palette.gold} onPress={() => router.push('/case-files')} wide />
+        <ModeCard title="Case Files" subtitle="24 curated mysteries across six chapters" icon="albums-outline" accent={palette.gold} onPress={() => router.push('/case-files')} wide />
         <ModeCard title="Daily Case" subtitle={dailyComplete ? 'Official result recorded — replay available' : `${daily.title} · same case for every detective`} icon="calendar-outline" accent={dailyComplete ? palette.success : '#8E6FB1'} onPress={() => router.push('/daily')} badge={dailyComplete ? 'Closed' : 'Today'} />
         <ModeCard title="Endless Cases" subtitle="Deterministic replayable mysteries" icon="infinite-outline" accent="#557C78" onPress={() => router.push('/endless')} />
         <ModeCard title="Rapid Deduction" subtitle="Three minutes. Close as many as you can." icon="flash-outline" accent={palette.crimson} onPress={() => router.push('/rapid')} badge={state.bestRapidScore ? `Best ${state.bestRapidScore}` : undefined} />

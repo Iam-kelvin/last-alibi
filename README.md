@@ -6,12 +6,13 @@ Core play, progression, Daily Cases, generated cases, settings, and statistics w
 
 ## Included gameplay
 
-- Six Case Files chapters with 12 curated mysteries across Beginner through Master difficulty
+- Six Case Files chapters with 24 curated mysteries across Beginner through Master difficulty
 - All six case structures: Liar, Broken Alibi, Impossible Evidence, Who Did It?, Timeline, and Missing Detail
 - A deterministic offline Daily Case keyed by local calendar date and generator version
 - Deterministic Endless Cases with reproducible seeds and logic audits
 - Three-minute Rapid Deduction sessions with rising difficulty and a persistent best score
-- Escalating hints, retryable wrong guesses, evidence/statement/timeline bookmarks, full solution reasoning, and score breakdowns
+- An interactive deduction board for bookmarking facts, testing two-item connections, and discovering the key contradiction
+- Escalating hints, retryable wrong guesses, full solution reasoning, and score breakdowns
 - XP, levels, chapter unlocks, Daily streaks, detailed statistics, and 12 achievements
 - Local save migration and safe recovery from corrupt data
 - Original sound effects, ambient audio, haptics, theme selection, text scaling, reduced motion, and screen-reader labels
@@ -128,7 +129,7 @@ Suggested runtime limits are one shared CPU and 128 MB RAM for the final Nginx c
 
 `app.json` defines the Android application ID as `com.lastalibi.game`. Build profiles live in `eas.json`:
 
-The current directly installable Android release is [the-last-alibi-v1.0.0.apk](artifacts/the-last-alibi-v1.0.0.apk). Download it on an ARM64 Android 7.0 or newer device, allow installs from the browser or file manager when Android prompts, then open the downloaded file. Its SHA-256 checksum is recorded in [`artifacts/SHA256SUMS.txt`](artifacts/SHA256SUMS.txt).
+The current directly installable Android release is [the-last-alibi-v1.1.0.apk](artifacts/the-last-alibi-v1.1.0.apk). Download it on an ARM64 Android 7.0 or newer device, allow installs from the browser or file manager when Android prompts, then open the downloaded file. Its SHA-256 checksum is recorded in [`artifacts/SHA256SUMS.txt`](artifacts/SHA256SUMS.txt).
 
 To create a directly installable APK locally, install JDK 17+ plus Android SDK API 36, Build Tools 36.0.0, and NDK 27.1.12297006, and keep at least 8 GB of disk space free for a clean native build. Set `JAVA_HOME` and `ANDROID_HOME` when they are not installed in their standard locations. On Linux/macOS run:
 
@@ -142,7 +143,7 @@ On Windows PowerShell run:
 npm run build:apk
 ```
 
-Both local APK commands run Expo prebuild first so changes in `app.json` and config plugins are synchronized into the generated native project. The APK is copied to `artifacts/the-last-alibi-v1.0.0.apk`. The local APK targets 64-bit ARM Android devices and is signed with the generated development keystore so it can be installed directly; use EAS-managed production credentials for store distribution.
+Both local APK commands run Expo prebuild first so changes in `app.json` and config plugins are synchronized into the generated native project. The APK is copied to a versioned path such as `artifacts/the-last-alibi-v1.1.0.apk`. The local APK targets 64-bit ARM Android devices and is signed with the generated development keystore so it can be installed directly; use EAS-managed production credentials for store distribution.
 
 For remote builds:
 
@@ -173,7 +174,7 @@ assets/
 public/         PWA manifest, icon, and service worker
 ```
 
-Cases are structured data; UI code contains no case-specific answer logic. Every bundled case is validated at module load. Generated cases carry a candidate audit that must prove exactly one answer, consistent evidence, possible distractors, and derivability from the information shown. Invalid cases throw before they can be presented.
+Cases are structured data; UI code contains no case-specific answer logic. Every bundled case and chapter assignment is validated at module load, including its two-fact deduction connection. Generated cases carry a candidate audit that must prove exactly one answer, consistent evidence, possible distractors, and derivability from the information shown. Invalid cases throw before they can be presented.
 
 The same `seed + generator version` always produces the same generated case. The Daily seed also includes the local `YYYY-MM-DD` date.
 

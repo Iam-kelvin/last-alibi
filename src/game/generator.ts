@@ -2,7 +2,7 @@ import { assertValidCase, getDecisionIds } from '@/game/case-validation';
 import { createSeededRandom, hashSeed, pick, shuffle } from '@/game/random';
 import { DIFFICULTIES, type CaseDefinition, type Difficulty } from '@/types/game';
 
-export const CASE_GENERATOR_VERSION = 2;
+export const CASE_GENERATOR_VERSION = 3;
 
 interface GenerateOptions {
   difficulty?: Difficulty;
@@ -92,6 +92,7 @@ function generateBrokenAlibi(seed: string, options: GenerateOptions): CaseDefini
     answer: { kind: 'suspect', targetId: culprit.id, label: culprit.name },
     explanation: `${culprit.name} gives the impossible alibi. The annex takes ${oneWay} minutes each way, so the walk alone needs ${oneWay * 2} minutes inside a ${windowMinutes}-minute window.`,
     contradiction: `The claimed round trip is longer than the entire disappearance window.`,
+    keyComparison: { itemIds: ['e-route', `s${ctx.culpritIndex + 1}`], insight: `The route needs ${oneWay * 2} walking minutes, but the recorded window lasts only ${windowMinutes}.` },
     hints: [
       { id: 'h1', text: 'Treat every trip as a round trip.', focusId: 'e-route' },
       { id: 'h2', text: `Compare ${culprit.name}'s route with both ends of the window.`, focusId: `s${ctx.culpritIndex + 1}` },
@@ -131,6 +132,7 @@ function generateLiar(seed: string, options: GenerateOptions): CaseDefinition {
     answer: { kind: 'statement', targetId: `s${ctx.culpritIndex + 1}`, label: `${culprit.name}'s statement` },
     explanation: `${culprit.name}'s statement is false. Their badge passed the cabinet while the west room recorded no entry, whereas every other location statement is independently logged.`,
     contradiction: 'The badge and empty room record disprove the claimed location.',
+    keyComparison: { itemIds: ['e-cabinet', `s${ctx.culpritIndex + 1}`], insight: 'The badge scan places this person beside the cabinet during the time they claim to be elsewhere.' },
     hints: [
       { id: 'h1', text: 'Find the account checked by two location systems.', focusId: 'e-west' },
       { id: 'h2', text: `${culprit.name} claims to stay in a room that logged nobody.`, focusId: `s${ctx.culpritIndex + 1}` },
@@ -168,6 +170,7 @@ function generateImpossibleEvidence(seed: string, options: GenerateOptions): Cas
     answer: { kind: 'evidence', targetId: 'e-receipt', label: 'Late transaction receipt' },
     explanation: `The Late transaction receipt is impossible. It is timed ${receiptMinute - closeMinute} minutes after the only register disconnected, while the shutdown record is confirmed by the camera clock.`,
     contradiction: 'A disconnected register cannot issue the later receipt.',
+    keyComparison: { itemIds: ['e-register', 'e-receipt'], insight: 'The receipt is timestamped after the only issuing register had disconnected.' },
     hints: [
       { id: 'h1', text: 'Compare the documents that come from the same machine.', focusId: 'e-register' },
       { id: 'h2', text: 'One transaction occurs after shutdown.', focusId: 'e-receipt' },
@@ -206,6 +209,7 @@ function generateTimeline(seed: string, options: GenerateOptions): CaseDefinitio
     answer: { kind: 'timeline', targetId: 't-alert', label: 'Cabinet sensor alert' },
     explanation: 'The Cabinet sensor alert cannot occur while mains power is off. The manual confirms that sensor has no battery and only becomes available after its restart.',
     contradiction: 'An unpowered sensor is credited with an alert.',
+    keyComparison: { itemIds: ['e-manual', 't-alert'], insight: 'The alert is assigned to a sensor that the manual says cannot operate without mains power.' },
     hints: [
       { id: 'h1', text: 'Distinguish the emergency system from the cabinet system.', focusId: 'e-manual' },
       { id: 'h2', text: 'One event occurs before its device restarts.', focusId: 't-alert' },

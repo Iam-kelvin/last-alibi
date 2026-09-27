@@ -1,4 +1,6 @@
-import { assertValidCase } from '@/game/case-validation';
+import { CHAPTERS } from '@/data/chapters';
+import { assertValidCase, assertValidCaseCatalog } from '@/game/case-validation';
+import { EXPANDED_CURATED_INPUTS } from '@/data/expanded-curated-cases';
 import type {
   CaseAnswer,
   CaseDefinition,
@@ -18,7 +20,7 @@ interface PersonInput {
   statementTitle?: string;
 }
 
-interface CuratedInput {
+export interface CuratedInput {
   id: string;
   chapterId: string;
   title: string;
@@ -34,6 +36,7 @@ interface CuratedInput {
   answer: CaseAnswer;
   explanation: string;
   contradiction: string;
+  keyComparison?: { itemIds: [string, string]; insight: string };
   hints: CaseHint[];
   tags: string[];
   estimatedSeconds?: number;
@@ -42,6 +45,17 @@ interface CuratedInput {
 const ACCENTS = ['#B85C52', '#557C78', '#9A7B4F', '#665A8E', '#7B684E'];
 
 function curated(input: CuratedInput): CaseDefinition {
+  const statementIds = input.people.map((person) => `${person.id}-statement`);
+  const availableNoteIds = new Set([
+    ...statementIds,
+    ...input.evidence.map((item) => item.id),
+    ...(input.timeline ?? []).map((item) => item.id),
+  ]);
+  const inferredComparisonIds = [...new Set(input.hints.map((hint) => hint.focusId).filter((id): id is string => typeof id === 'string' && availableNoteIds.has(id)))];
+  const fallbackIds = [...statementIds, ...input.evidence.map((item) => item.id), ...(input.timeline ?? []).map((item) => item.id)];
+  fallbackIds.forEach((id) => {
+    if (inferredComparisonIds.length < 2 && !inferredComparisonIds.includes(id)) inferredComparisonIds.push(id);
+  });
   return assertValidCase({
     id: input.id,
     version: 1,
@@ -72,6 +86,10 @@ function curated(input: CuratedInput): CaseDefinition {
     answer: input.answer,
     explanation: input.explanation,
     contradiction: input.contradiction,
+    keyComparison: input.keyComparison ?? {
+      itemIds: [inferredComparisonIds[0]!, inferredComparisonIds[1]!],
+      insight: input.contradiction,
+    },
     hints: input.hints,
     tags: input.tags,
     estimatedSeconds: input.estimatedSeconds ?? 180,
@@ -79,7 +97,7 @@ function curated(input: CuratedInput): CaseDefinition {
   });
 }
 
-export const CURATED_CASES: CaseDefinition[] = [
+const CORE_CURATED_CASES: CaseDefinition[] = [
   curated({
     id: 'sc-vanished-violin', chapterId: 'small-crimes', title: 'The Vanished Violin', location: 'Bellweather Music Hall', difficulty: 'Beginner', type: 'Liar',
     introduction: 'A violin disappeared from the greenroom between the final rehearsal and curtain call. Only three people entered the corridor.',
@@ -436,6 +454,13 @@ export const CURATED_CASES: CaseDefinition[] = [
   }),
 ];
 
+export const CURATED_CASES: CaseDefinition[] = [
+  ...CORE_CURATED_CASES,
+  ...EXPANDED_CURATED_INPUTS.map(curated),
+];
+
 export const CURATED_CASE_MAP = Object.fromEntries(
   CURATED_CASES.map((caseFile) => [caseFile.id, caseFile]),
 ) as Record<string, CaseDefinition>;
+
+assertValidCaseCatalog(CURATED_CASES, CHAPTERS);

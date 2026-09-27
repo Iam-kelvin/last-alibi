@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppHeader, Badge, Body, Card, ProgressBar, Screen, SectionTitle, useTextScale } from '@/components/ui';
 import { CHAPTERS } from '@/data/chapters';
-import { CURATED_CASE_MAP } from '@/data/curated-cases';
+import { CURATED_CASE_MAP, CURATED_CASES } from '@/data/curated-cases';
 import { useFeedback } from '@/services/feedback';
 import { useGame } from '@/state/game-context';
 import { usePalette } from '@/theme';
@@ -18,7 +18,7 @@ export default function CaseFilesScreen() {
 
   return (
     <Screen>
-      <AppHeader title="Case Files" subtitle={`${curatedSolved} of 12 curated cases closed`} />
+      <AppHeader title="Case Files" subtitle={`${curatedSolved} of ${CURATED_CASES.length} curated cases closed`} />
       <Body muted>Chapters unlock as you close curated cases. Reopen any solved file to improve your best score.</Body>
       {CHAPTERS.map((chapter) => {
         const locked = !state.unlockedChapterIds.includes(chapter.id);

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { deserializePlayerState } from '@/state/persistence';
+import { CHAPTERS } from '@/data/chapters';
+import { CURATED_CASE_MAP } from '@/data/curated-cases';
 
 describe('persistence migration', () => {
   it('falls back safely for corrupt data', () => {
@@ -85,5 +87,23 @@ describe('persistence migration', () => {
     expect(state.settings.music).toBe(false);
     expect(state.settings.theme).toBe('noir');
     expect(state.settings.textSize).toBe('extra-large');
+  });
+
+  it('recovers chapter unlocks from valid curated completions without relocking saved chapters', () => {
+    const solvedIds = CHAPTERS.flatMap((chapter) => chapter.caseIds).slice(0, 7);
+    const completedCases = Object.fromEntries(solvedIds.map((caseId) => {
+      const caseFile = CURATED_CASE_MAP[caseId]!;
+      return [caseId, {
+        caseId, caseType: caseFile.type, difficulty: caseFile.difficulty, mode: 'case-files',
+        completedAt: '2026-09-27T00:00:00.000Z', score: 1000, elapsedSeconds: 90,
+        wrongGuesses: 0, hintsUsed: 0, firstTry: true, xpEarned: 200,
+      }];
+    }));
+    const state = deserializePlayerState(JSON.stringify({
+      completedCases,
+      unlockedChapterIds: ['master-detectives'],
+    }));
+
+    expect(state.unlockedChapterIds).toEqual(expect.arrayContaining(['small-crimes', 'missing-objects', 'locked-rooms', 'master-detectives']));
   });
 });

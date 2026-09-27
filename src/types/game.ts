@@ -70,6 +70,11 @@ export interface CaseAnswer {
   label: string;
 }
 
+export interface KeyComparison {
+  itemIds: [string, string];
+  insight: string;
+}
+
 export interface CaseDefinition {
   id: string;
   version: number;
@@ -89,6 +94,7 @@ export interface CaseDefinition {
   answer: CaseAnswer;
   explanation: string;
   contradiction: string;
+  keyComparison: KeyComparison;
   hints: CaseHint[];
   tags: string[];
   estimatedSeconds: number;

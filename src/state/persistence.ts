@@ -15,6 +15,7 @@ export const PLAYER_STATE_STORAGE_KEY = '@last-alibi/player-state/v1';
 
 const GAME_MODES = ['case-files', 'daily', 'endless', 'rapid'] as const;
 const CHAPTER_IDS = new Set(CHAPTERS.map((chapter) => chapter.id));
+const CURATED_CASE_IDS = new Set(CHAPTERS.flatMap((chapter) => chapter.caseIds));
 let persistenceQueue: Promise<void> = Promise.resolve();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -118,6 +119,9 @@ export function deserializePlayerState(raw: string | null): PlayerState {
     ) as PlayerState['stats']['byType'];
     const completedCases = sanitizeCompletedCases(parsed.completedCases);
     const completedRecords = Object.values(completedCases);
+    const curatedSolved = Object.keys(completedCases).filter((caseId) => CURATED_CASE_IDS.has(caseId)).length;
+    const eligibleChapterIds = CHAPTERS.filter((chapter) => curatedSolved >= chapter.requiredSolved).map((chapter) => chapter.id);
+    const savedChapterIds = sanitizeStringList(parsed.unlockedChapterIds, 'small-crimes').filter((id) => CHAPTER_IDS.has(id));
     const dailyResults = sanitizeDailyResults(parsed.dailyResults);
     const currentDailyStreak = calculateDailyStreak(dailyResults);
 
@@ -128,7 +132,7 @@ export function deserializePlayerState(raw: string | null): PlayerState {
       tutorialCompleted: typeof parsed.tutorialCompleted === 'boolean' ? parsed.tutorialCompleted : false,
       xp: nonNegativeInteger(parsed.xp, 0),
       completedCases,
-      unlockedChapterIds: sanitizeStringList(parsed.unlockedChapterIds, 'small-crimes').filter((id) => CHAPTER_IDS.has(id)),
+      unlockedChapterIds: [...new Set([...savedChapterIds, ...eligibleChapterIds])],
       dailyResults,
       currentDailyStreak,
       longestDailyStreak: Math.max(currentDailyStreak, nonNegativeInteger(parsed.longestDailyStreak, 0)),

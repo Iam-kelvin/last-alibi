@@ -11,6 +11,8 @@ export type AnalyticsEvent =
   | 'wrong_guess'
   | 'hint_used'
   | 'evidence_opened'
+  | 'deduction_tested'
+  | 'deduction_connected'
   | 'suspect_selected'
   | 'daily_started'
   | 'daily_completed'

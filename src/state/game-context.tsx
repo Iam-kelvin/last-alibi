@@ -41,7 +41,8 @@ function reducer(state: PlayerState, action: Action): PlayerState {
         : state.dailyResults;
       const currentDailyStreak = calculateDailyStreak(dailyResults);
       const curatedSolved = Object.keys(completedCases).filter((caseId) => CURATED_CASE_MAP[caseId]).length;
-      const unlockedChapterIds = CHAPTERS.filter((chapter) => curatedSolved >= chapter.requiredSolved).map((chapter) => chapter.id);
+      const eligibleChapterIds = CHAPTERS.filter((chapter) => curatedSolved >= chapter.requiredSolved).map((chapter) => chapter.id);
+      const unlockedChapterIds = [...new Set([...state.unlockedChapterIds, ...eligibleChapterIds])];
       const next: PlayerState = {
         ...state,
         xp: state.xp + (awardXp ? record.xpEarned : 0),

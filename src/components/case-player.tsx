@@ -4,7 +4,7 @@ import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { Badge, Body, Button, Card, Divider, Eyebrow, ProgressBar, Screen, SectionTitle, Title, useTextScale } from '@/components/ui';
 import { calculateScore } from '@/game/scoring';
-import { getNextHint, isCorrectAnswer } from '@/game/investigation';
+import { getNextHint, isCorrectAnswer, isKeyComparison } from '@/game/investigation';
 import { track } from '@/services/analytics';
 import { useFeedback } from '@/services/feedback';
 import { useGame } from '@/state/game-context';
@@ -16,6 +16,11 @@ type InvestigationTab = 'suspects' | 'evidence' | 'timeline' | 'notes' | 'decisi
 export interface SolvedSummary {
   record: CompletionRecord;
   breakdown: ScoreBreakdown;
+}
+
+interface ComparisonResult {
+  matched: boolean;
+  message: string;
 }
 
 interface CasePlayerProps {
@@ -61,6 +66,8 @@ export function CasePlayer({
   const [tab, setTab] = useState<InvestigationTab>('suspects');
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<string[]>([]);
+  const [comparisonSelection, setComparisonSelection] = useState<string[]>([]);
+  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [wrongGuesses, setWrongGuesses] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -120,6 +127,35 @@ export function CasePlayer({
   const toggleHighlight = (id: string, effect: 'tap' | 'clue' = 'tap') => {
     feedback.play(effect);
     setHighlights((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    setComparisonSelection((current) => current.filter((item) => item !== id));
+    setComparisonResult(null);
+  };
+
+  const toggleComparisonItem = (id: string) => {
+    feedback.play('tap');
+    setComparisonSelection((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      return current.length >= 2 ? [id] : [...current, id];
+    });
+    setComparisonResult(null);
+  };
+
+  const testComparison = () => {
+    if (comparisonSelection.length !== 2) return;
+    const matched = isKeyComparison(caseFile, comparisonSelection);
+    const result = {
+      matched,
+      message: matched
+        ? caseFile.keyComparison.insight
+        : 'These facts can exist together. Try connecting a different pair from your notes.',
+    };
+    setComparisonResult(result);
+    feedback.play(matched ? 'clue' : 'tap');
+    track('deduction_tested', { case_id: caseFile.id, matched, mode });
+    if (matched) {
+      track('deduction_connected', { case_id: caseFile.id, mode });
+      AccessibilityInfo.announceForAccessibility(`Key connection found. ${result.message}`);
+    }
   };
 
   const revealHint = () => {
@@ -289,7 +325,17 @@ export function CasePlayer({
         {tab === 'suspects' ? <SuspectsTab caseFile={caseFile} highlights={highlights} toggleHighlight={toggleHighlight} /> : null}
         {tab === 'evidence' ? <EvidenceTab caseFile={caseFile} highlights={highlights} toggleHighlight={toggleHighlight} /> : null}
         {tab === 'timeline' ? <TimelineTab caseFile={caseFile} highlights={highlights} toggleHighlight={toggleHighlight} /> : null}
-        {tab === 'notes' ? <NotesTab caseFile={caseFile} highlights={highlights} toggleHighlight={toggleHighlight} /> : null}
+        {tab === 'notes' ? (
+          <NotesTab
+            caseFile={caseFile}
+            highlights={highlights}
+            toggleHighlight={toggleHighlight}
+            comparisonSelection={comparisonSelection}
+            toggleComparisonItem={toggleComparisonItem}
+            testComparison={testComparison}
+            comparisonResult={comparisonResult}
+          />
+        ) : null}
         {tab === 'decision' ? (
           <DecisionTab
             caseFile={caseFile}
@@ -422,7 +468,20 @@ function TimelineTab({ caseFile, highlights, toggleHighlight }: TabProps) {
   );
 }
 
-function NotesTab({ caseFile, highlights, toggleHighlight }: TabProps) {
+function NotesTab({
+  caseFile,
+  highlights,
+  toggleHighlight,
+  comparisonSelection,
+  toggleComparisonItem,
+  testComparison,
+  comparisonResult,
+}: TabProps & {
+  comparisonSelection: string[];
+  toggleComparisonItem(id: string): void;
+  testComparison(): void;
+  comparisonResult: ComparisonResult | null;
+}) {
   const palette = usePalette();
   const highlighted = [
     ...caseFile.statements.map((item) => ({ id: item.id, title: item.title, body: item.text, kind: 'Statement' })),
@@ -432,25 +491,73 @@ function NotesTab({ caseFile, highlights, toggleHighlight }: TabProps) {
   return (
     <View>
       <SectionTitle>Detective notes</SectionTitle>
-      <Body muted>Your lightweight case board. Tap the bookmark to remove an item.</Body>
+      <Body muted>Build a deduction board from marked facts, then connect two notes to test your theory.</Body>
       {highlighted.length === 0 ? (
         <Card style={styles.notesEmpty}>
           <Ionicons name="bookmark-outline" size={32} color={palette.gold} />
-          <Body muted style={styles.resultCenter}>Nothing marked yet. Bookmark a statement, clue, or event while investigating.</Body>
+          <Body muted style={styles.resultCenter}>Nothing marked yet. Bookmark statements, evidence, or timeline events to build your board.</Body>
         </Card>
       ) : (
-        <View style={styles.cardList}>
-          {highlighted.map((item) => (
-            <Card key={item.id}>
-              <View style={styles.noteTop}>
-                <Badge label={item.kind} />
-                <MarkButton marked onPress={() => toggleHighlight(item.id)} />
+        <>
+          <View style={styles.cardList}>
+            {highlighted.map((item) => {
+              const selected = comparisonSelection.includes(item.id);
+              return (
+                <Card key={item.id} style={selected && { borderColor: palette.gold, borderWidth: 2 }}>
+                  <View style={styles.noteTop}>
+                    <Badge label={item.kind} tone={selected ? 'gold' : 'neutral'} />
+                    <View style={styles.noteActions}>
+                      <Pressable
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selected }}
+                        accessibilityLabel={`${selected ? 'Remove' : 'Add'} ${item.title} ${selected ? 'from' : 'to'} comparison`}
+                        hitSlop={6}
+                        onPress={() => toggleComparisonItem(item.id)}
+                        style={[styles.compareToggle, { borderColor: selected ? palette.gold : palette.borderStrong, backgroundColor: selected ? `${palette.gold}1F` : palette.elevated }]}
+                      >
+                        <Ionicons name={selected ? 'git-compare' : 'add'} size={17} color={selected ? palette.gold : palette.muted} />
+                        <Text style={[styles.compareToggleText, { color: selected ? palette.gold : palette.muted }]}>{selected ? 'LINKED' : 'COMPARE'}</Text>
+                      </Pressable>
+                      <MarkButton marked onPress={() => toggleHighlight(item.id)} />
+                    </View>
+                  </View>
+                  <Text style={[styles.noteTitle, { color: palette.text }]}>{item.title}</Text>
+                  <Body muted>{item.body}</Body>
+                </Card>
+              );
+            })}
+          </View>
+          <Card style={[styles.connectionBoard, comparisonResult?.matched && { borderColor: palette.success, borderWidth: 2 }]}>
+            <View style={styles.connectionHeading}>
+              <View style={[styles.connectionIcon, { backgroundColor: `${comparisonResult?.matched ? palette.success : palette.gold}1F` }]}>
+                <Ionicons name="git-compare-outline" size={23} color={comparisonResult?.matched ? palette.success : palette.gold} />
               </View>
-              <Text style={[styles.noteTitle, { color: palette.text }]}>{item.title}</Text>
-              <Body muted>{item.body}</Body>
-            </Card>
-          ))}
-        </View>
+              <View style={styles.connectionCopy}>
+                <Text style={[styles.connectionTitle, { color: palette.text }]}>Connection board</Text>
+                <Body muted>{comparisonSelection.length}/2 facts selected</Body>
+              </View>
+              {comparisonResult?.matched ? <Badge label="Key link" tone="success" /> : null}
+            </View>
+            <View style={styles.connectionSlots}>
+              {[0, 1].map((index) => {
+                const selectedId = comparisonSelection[index];
+                const selectedItem = highlighted.find((item) => item.id === selectedId);
+                return (
+                  <View key={index} style={[styles.connectionSlot, { borderColor: selectedItem ? palette.goldSoft : palette.border, backgroundColor: palette.elevated }]}>
+                    <Text numberOfLines={2} style={[styles.connectionSlotText, { color: selectedItem ? palette.text : palette.muted }]}>{selectedItem?.title ?? `Select fact ${index + 1}`}</Text>
+                  </View>
+                );
+              })}
+            </View>
+            {comparisonResult ? (
+              <View accessibilityLiveRegion="polite" style={[styles.comparisonResult, { borderColor: comparisonResult.matched ? palette.success : palette.borderStrong, backgroundColor: comparisonResult.matched ? `${palette.success}14` : palette.elevated }]}>
+                <Ionicons name={comparisonResult.matched ? 'sparkles' : 'swap-horizontal'} size={19} color={comparisonResult.matched ? palette.success : palette.muted} />
+                <Body style={styles.comparisonResultText}>{comparisonResult.message}</Body>
+              </View>
+            ) : null}
+            <Button label="Test connection" icon="git-compare-outline" disabled={comparisonSelection.length !== 2} onPress={testComparison} />
+          </Card>
+        </>
       )}
     </View>
   );
@@ -625,7 +732,20 @@ const styles = StyleSheet.create({
   timelineTitle: { flex: 1, fontWeight: '800' },
   notesEmpty: { marginTop: 22, minHeight: 180, alignItems: 'center', justifyContent: 'center' },
   noteTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  noteActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  compareToggle: { minHeight: 38, borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  compareToggleText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
   noteTitle: { fontWeight: '800', fontSize: 16, marginBottom: 5 },
+  connectionBoard: { marginTop: 14, gap: 14 },
+  connectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  connectionIcon: { width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  connectionCopy: { flex: 1 },
+  connectionTitle: { fontSize: 16, fontWeight: '900' },
+  connectionSlots: { flexDirection: 'row', gap: 9 },
+  connectionSlot: { flex: 1, minHeight: 58, borderWidth: 1, borderStyle: 'dashed', borderRadius: 11, padding: 10, justifyContent: 'center' },
+  connectionSlotText: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  comparisonResult: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, padding: 11, borderWidth: 1, borderRadius: 11 },
+  comparisonResultText: { flex: 1 },
   decisionPrompt: { marginTop: 4 },
   decisionQuestion: { fontWeight: '800', lineHeight: 29 },
   choice: { minHeight: 72, borderWidth: 1, borderRadius: 13, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },

@@ -1,4 +1,4 @@
-import { CASE_TYPES, DIFFICULTIES, type CaseDefinition, type DecisionKind } from '@/types/game';
+import { CASE_TYPES, DIFFICULTIES, type CaseDefinition, type Chapter, type DecisionKind } from '@/types/game';
 
 export interface ValidationResult {
   valid: boolean;
@@ -180,6 +180,22 @@ export function validateCase(caseFile: CaseDefinition): ValidationResult {
     }
   });
 
+  if (!isRecord(value.keyComparison)) {
+    errors.push('keyComparison must be an object.');
+  } else {
+    const comparisonIds = stringArray(value.keyComparison.itemIds);
+    if (!Array.isArray(value.keyComparison.itemIds) || comparisonIds.length !== value.keyComparison.itemIds.length) {
+      errors.push('keyComparison.itemIds must contain only strings.');
+    }
+    if (comparisonIds.length !== 2 || new Set(comparisonIds).size !== 2) {
+      errors.push('keyComparison must reference exactly two distinct items.');
+    }
+    comparisonIds.forEach((id) => {
+      if (!focusIds.has(id) || suspectIds.has(id)) errors.push(`keyComparison references unavailable note item ${id}.`);
+    });
+    requireString(errors, 'keyComparison.insight', value.keyComparison.insight);
+  }
+
   let decisionIds: string[] = [];
   let answerTarget: string | undefined;
   let answerLabel: string | undefined;
@@ -240,4 +256,53 @@ export function assertValidCase(caseFile: CaseDefinition): CaseDefinition {
 export function parseCase(value: unknown): CaseDefinition {
   if (!isRecord(value)) throw new Error('Case payload must be an object.');
   return assertValidCase(value as unknown as CaseDefinition);
+}
+
+export function validateCaseCatalog(cases: CaseDefinition[], chapters: Chapter[]): ValidationResult {
+  const errors: string[] = [];
+  const caseIds = cases.map((caseFile) => caseFile.id);
+  const chapterIds = chapters.map((chapter) => chapter.id);
+  const duplicateCaseIds = [...new Set(duplicateIds(caseIds))];
+  const duplicateChapterIds = [...new Set(duplicateIds(chapterIds))];
+  if (duplicateCaseIds.length) errors.push(`duplicate case IDs: ${duplicateCaseIds.join(', ')}.`);
+  if (duplicateChapterIds.length) errors.push(`duplicate chapter IDs: ${duplicateChapterIds.join(', ')}.`);
+
+  const caseMap = new Map(cases.map((caseFile) => [caseFile.id, caseFile]));
+  const listedCaseIds: string[] = [];
+  let priorCapacity = 0;
+  let priorRequired = -1;
+  chapters.forEach((chapter, index) => {
+    if (chapter.number !== index + 1) errors.push(`chapter ${chapter.id} must have sequence number ${index + 1}.`);
+    if (!Number.isSafeInteger(chapter.requiredSolved) || chapter.requiredSolved < 0) errors.push(`chapter ${chapter.id} has an invalid unlock requirement.`);
+    if (chapter.requiredSolved < priorRequired) errors.push(`chapter ${chapter.id} lowers the unlock requirement.`);
+    if (chapter.requiredSolved > priorCapacity) errors.push(`chapter ${chapter.id} requires more cases than earlier chapters provide.`);
+    if (chapter.caseIds.length === 0) errors.push(`chapter ${chapter.id} has no cases.`);
+    const duplicates = [...new Set(duplicateIds(chapter.caseIds))];
+    if (duplicates.length) errors.push(`chapter ${chapter.id} repeats cases: ${duplicates.join(', ')}.`);
+    chapter.caseIds.forEach((caseId) => {
+      listedCaseIds.push(caseId);
+      const caseFile = caseMap.get(caseId);
+      if (!caseFile) {
+        errors.push(`chapter ${chapter.id} references missing case ${caseId}.`);
+      } else {
+        if (caseFile.chapterId !== chapter.id) errors.push(`case ${caseId} belongs to ${String(caseFile.chapterId)} instead of ${chapter.id}.`);
+        if (caseFile.difficulty !== chapter.difficulty) errors.push(`case ${caseId} difficulty does not match chapter ${chapter.id}.`);
+      }
+    });
+    priorRequired = chapter.requiredSolved;
+    priorCapacity += chapter.caseIds.length;
+  });
+
+  const repeatedAcrossChapters = [...new Set(duplicateIds(listedCaseIds))];
+  if (repeatedAcrossChapters.length) errors.push(`cases listed in multiple chapters: ${repeatedAcrossChapters.join(', ')}.`);
+  cases.filter((caseFile) => caseFile.source === 'curated').forEach((caseFile) => {
+    if (!listedCaseIds.includes(caseFile.id)) errors.push(`curated case ${caseFile.id} is not assigned to a chapter.`);
+  });
+
+  return { valid: errors.length === 0, errors };
+}
+
+export function assertValidCaseCatalog(cases: CaseDefinition[], chapters: Chapter[]): void {
+  const result = validateCaseCatalog(cases, chapters);
+  if (!result.valid) throw new Error(`Invalid case catalog: ${result.errors.join(' ')}`);
 }

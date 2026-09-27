@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { CURATED_CASES } from '@/data/curated-cases';
-import { parseCase, validateCase } from '@/game/case-validation';
+import { CHAPTERS } from '@/data/chapters';
+import { parseCase, validateCase, validateCaseCatalog } from '@/game/case-validation';
 
 describe('curated case parser and validation', () => {
   it('accepts every bundled case', () => {
@@ -11,8 +12,16 @@ describe('curated case parser and validation', () => {
   });
 
   it('has unique case IDs and all six case structures', () => {
+    expect(CURATED_CASES).toHaveLength(24);
     expect(new Set(CURATED_CASES.map((caseFile) => caseFile.id)).size).toBe(CURATED_CASES.length);
     expect(new Set(CURATED_CASES.map((caseFile) => caseFile.type)).size).toBe(6);
+  });
+
+  it('keeps every curated case assigned to one valid chapter', () => {
+    expect(validateCaseCatalog(CURATED_CASES, CHAPTERS)).toEqual({ valid: true, errors: [] });
+    const brokenChapters = structuredClone(CHAPTERS);
+    brokenChapters[0]!.caseIds.push('missing-case');
+    expect(validateCaseCatalog(CURATED_CASES, brokenChapters).errors).toContain('chapter small-crimes references missing case missing-case.');
   });
 
   it('rejects a missing answer and invalid hint reference', () => {
@@ -23,6 +32,16 @@ describe('curated case parser and validation', () => {
     expect(result.valid).toBe(false);
     expect(result.errors.join(' ')).toContain('does not exist');
     expect(result.errors.join(' ')).toContain('references missing item');
+  });
+
+  it('rejects malformed or unavailable deduction comparisons', () => {
+    const duplicate = structuredClone(CURATED_CASES[0]!);
+    duplicate.keyComparison.itemIds = [duplicate.evidence[0]!.id, duplicate.evidence[0]!.id];
+    expect(validateCase(duplicate).errors).toContain('keyComparison must reference exactly two distinct items.');
+
+    const missing = structuredClone(CURATED_CASES[0]!);
+    missing.keyComparison.itemIds = [missing.evidence[0]!.id, 'missing-note'];
+    expect(validateCase(missing).errors).toContain('keyComparison references unavailable note item missing-note.');
   });
 
   it('parses a serialized structured case and rejects non-object payloads', () => {

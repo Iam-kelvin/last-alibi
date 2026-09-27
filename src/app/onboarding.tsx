@@ -17,7 +17,7 @@ const STEPS = [
   },
   {
     eyebrow: 'Build your case', title: 'Compare, mark, connect.',
-    body: 'Move between People, Evidence, and Timeline. Bookmark suspicious items; they stay together in your lightweight Notes board.',
+    body: 'Move between People, Evidence, and Timeline. Bookmark suspicious items, then select two Notes and test whether they form the key contradiction.',
     icon: 'git-compare-outline' as const,
     exampleTitle: 'The contradiction', example: 'A receipt says 20:05. The only register shut down at 19:50. Both facts cannot be true.',
   },
